@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Mon Déménagement">
+<meta name="theme-color" content="#1D9E75">
+<title>Mon Déménagement</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;width:100%;position:fixed;overflow:hidden}
+:root{--green:#1D9E75;--green-bg:#E1F5EE;--green-dk:#0F6E56;--red-bg:#FCEBEB;--red-dk:#A32D2D;--bg:#f5f5f2;--card:#fff;--border:#e0e0da;--text:#1a1a18;--muted:#6b6b67;--hint:#aaaaaa;--safe-top:0px;--safe-bottom:0px}
+@supports(padding:max(0px)) {
+  :root{--safe-top:max(12px,env(safe-area-inset-top));--safe-bottom:max(12px,env(safe-area-inset-bottom))}
+}
+@media(prefers-color-scheme:dark){:root{--bg:#1c1c1a;--card:#252523;--border:#333330;--text:#f0efe8;--muted:#888885;--hint:#555552;--green-bg:#0a2a1e}}
+body{font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif;background:var(--bg);color:var(--text);font-size:16px;display:flex;flex-direction:column;overflow:hidden}
+.header{background:var(--card);border-bottom:1px solid var(--border);padding:12px 16px;padding-top:max(12px,env(safe-area-inset-top));position:relative;z-index:50;flex-shrink:0}
+.header h1{font-size:18px;font-weight:700;letter-spacing:-0.5px}
+.header p{font-size:13px;color:var(--muted);margin-top:3px}
+.prog-meta{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin:10px 0 6px}
+.bar-bg{background:var(--border);border-radius:99px;height:6px}
+.bar-fill{height:6px;border-radius:99px;background:var(--green);transition:width .3s}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:12px 16px 8px;background:var(--bg)}
+.stat{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:11px 8px;text-align:center}
+.stat-n{font-size:22px;font-weight:700}
+.stat-l{font-size:12px;color:var(--muted);margin-top:3px}
+.nav-scroll{overflow-x:auto;padding:0 16px 10px;display:flex;gap:8px;scrollbar-width:none;background:var(--bg);flex-shrink:0}
+.nav-scroll::-webkit-scrollbar{display:none}
+.nav-btn{white-space:nowrap;padding:9px 16px;border-radius:99px;border:1px solid var(--border);font-size:13px;background:var(--card);color:var(--muted);cursor:pointer;flex-shrink:0;font-weight:500;min-height:44px;display:flex;align-items:center}
+.nav-btn.active{background:var(--green);color:#fff;border-color:var(--green);font-weight:600}
+.content{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.section{display:none;padding:0 16px 20px}
+.section.active{display:block}
+.note{background:var(--green-bg);border:1px solid #9FE1CB;border-radius:10px;padding:12px 14px;font-size:13px;color:var(--green-dk);margin-bottom:14px;line-height:1.5}
+.card{background:var(--card);border:1px solid var(--border);border-radius:14px;margin-bottom:12px;overflow:hidden}
+.card-hd{padding:12px 14px;border-bottom:1px solid var(--border);font-size:13px;font-weight:600;color:var(--muted)}
+.item{display:flex;align-items:center;gap:14px;padding:14px;border-bottom:1px solid var(--border);cursor:pointer;user-select:none;-webkit-user-select:none;min-height:52px}
+.item:last-child{border-bottom:none}
+.item:active{background:var(--bg)}
+.cb{width:24px;height:24px;border-radius:50%;border:2.5px solid var(--border);display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .15s}
+.cb.on{background:var(--green);border-color:var(--green)}
+.cb.on::after{content:'✓';color:#fff;font-size:14px;font-weight:700}
+.item-label{font-size:15px;flex:1;line-height:1.4}
+.item.checked .item-label{text-decoration:line-through;color:var(--hint)}
+.badge{font-size:11px;padding:3px 8px;border-radius:6px;margin-left:6px;display:inline-block;flex-shrink:0;font-weight:600}
+.b-f{background:var(--green-bg);color:var(--green-dk)}
+.b-u{background:var(--red-bg);color:var(--red-dk)}
+.reset{display:block;margin:16px auto 32px;padding:12px 20px;border-radius:99px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:13px;cursor:pointer;font-weight:500;min-height:44px}
+.reset:active{background:var(--bg)}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>🏠 Mon déménagement</h1>
+  <p>Appuie sur une ligne pour cocher</p>
+  <div class="prog-meta"><span>Progression</span><span id="pct">0%</span></div>
+  <div class="bar-bg"><div class="bar-fill" id="bar"></div></div>
+</div>
+
+<div class="stats">
+  <div class="stat"><div class="stat-n" id="sdone">0</div><div class="stat-l">Faits</div></div>
+  <div class="stat"><div class="stat-n" id="sleft">0</div><div class="stat-l">Restants</div></div>
+  <div class="stat"><div class="stat-n" id="stotal">0</div><div class="stat-l">Total</div></div>
+</div>
+
+<div class="nav-scroll" id="nav">
+  <div class="nav-btn active" data-sec="demarches">📋 Démarches</div>
+  <div class="nav-btn" data-sec="cuisine">🍳 Cuisine</div>
+  <div class="nav-btn" data-sec="linge">🛏 Linge</div>
+  <div class="nav-btn" data-sec="sdb">🚿 Salle de bain</div>
+  <div class="nav-btn" data-sec="beaute">💄 Beauté</div>
+  <div class="nav-btn" data-sec="vetements">👗 Vêtements</div>
+  <div class="nav-btn" data-sec="papiers">📄 Papiers</div>
+</div>
+
+<div class="content">
+
+<!-- DÉMARCHES -->
+<div id="sec-demarches" class="section active">
+  <div class="note">ℹ️ Appart meublé = lit, table, chaises, plaques fournies. Machine à laver : à confirmer avec le proprio.</div>
+  <div class="card"><div class="card-hd">🏢 Avant d'emménager</div><div id="l-avant"></div></div>
+  <div class="card"><div class="card-hd">📄 Administratif</div><div id="l-admin"></div></div>
+  <div class="card"><div class="card-hd">🔌 Abonnements & services</div><div id="l-services"></div></div>
+</div>
+
+<!-- CUISINE -->
+<div id="sec-cuisine" class="section">
+  <div class="note">ℹ️ Plaques de cuisson fournies ✓</div>
+  <div class="card"><div class="card-hd">🔪 Ustensiles</div><div id="l-usten"></div></div>
+  <div class="card"><div class="card-hd">🛒 Équipements</div><div id="l-equip"></div></div>
+  <div class="card"><div class="card-hd">🧹 Produits ménagers</div><div id="l-menage"></div></div>
+</div>
+
+<!-- LINGE -->
+<div id="sec-linge" class="section">
+  <div class="card"><div class="card-hd">🛏 Literie</div><div id="l-literie"></div></div>
+  <div class="card"><div class="card-hd">🧺 Linge de maison</div><div id="l-limaison"></div></div>
+  <div class="card"><div class="card-hd">🫧 Lessive & entretien</div><div id="l-lessive"></div></div>
+</div>
+
+<!-- SALLE DE BAIN -->
+<div id="sec-sdb" class="section">
+  <div class="card"><div class="card-hd">🚿 Hygiène</div><div id="l-hygiene"></div></div>
+  <div class="card"><div class="card-hd">🚽 Toilettes</div><div id="l-wc"></div></div>
+  <div class="card"><div class="card-hd">🪥 Accessoires</div><div id="l-accsdb"></div></div>
+</div>
+
+<!-- BEAUTÉ -->
+<div id="sec-beaute" class="section">
+  <div class="card"><div class="card-hd">💄 Maquillage</div><div id="l-maqui"></div></div>
+  <div class="card"><div class="card-hd">🧴 Soins visage</div><div id="l-visage"></div></div>
+  <div class="card"><div class="card-hd">✂️ Épilation & corps</div><div id="l-epil"></div></div>
+</div>
+
+<!-- VÊTEMENTS -->
+<div id="sec-vetements" class="section">
+  <div class="card"><div class="card-hd">👕 Hauts & bas</div><div id="l-hauts"></div></div>
+  <div class="card"><div class="card-hd">🩱 Sous-vêtements & nuit</div><div id="l-sous"></div></div>
+  <div class="card"><div class="card-hd">👟 Chaussures & accessoires</div><div id="l-chaus"></div></div>
+</div>
+
+<!-- PAPIERS -->
+<div id="sec-papiers" class="section">
+  <div class="card"><div class="card-hd">🪪 Pièces d'identité</div><div id="l-id"></div></div>
+  <div class="card"><div class="card-hd">🏦 Banque & logement</div><div id="l-banque"></div></div>
+  <div class="card"><div class="card-hd">🏥 Santé & divers</div><div id="l-sante"></div></div>
+</div>
+
+<button class="reset" id="reset">🔄 Tout réinitialiser</button>
+
+</div>
+
+<script>
+const DATA = {
+  avant:[
+    {t:"Signer le bail",u:1},{t:"Payer le dépôt de garantie",u:1},
+    {t:"Faire l'état des lieux d'entrée",u:1},{t:"Photographier chaque pièce",u:1},
+    {t:"Récupérer les clés"},{t:"Vérifier les équipements fournis"}
+  ],
+  admin:[
+    {t:"Souscrire une assurance habitation",u:1},
+    {t:"Réexpédition courrier (laposte.fr)"},{t:"Changer d'adresse sur ameli.fr"},
+    {t:"Changer d'adresse sur impots.gouv.fr"},{t:"Prévenir sa banque"},
+    {t:"Prévenir employeur / CAF si besoin"},{t:"Carte grise (si voiture)"}
+  ],
+  services:[
+    {t:"Ouvrir les compteurs EDF/Engie",u:1},{t:"Souscrire à internet (box)"},
+    {t:"Vérifier si charges comprises"},{t:"Organiser le déménagement"}
+  ],
+  usten:[
+    {t:"Poêle antiadhésive"},{t:"Casserole moyenne"},{t:"Grande casserole / faitout"},
+    {t:"Couteaux (chef + office)"},{t:"Planche à découper"},{t:"Passoire"},
+    {t:"Louche & spatule"},{t:"Économe"},{t:"Ouvre-boîte"},{t:"Tire-bouchon"}
+  ],
+  equip:[
+    {t:"Plaques de cuisson",f:1},{t:"Micro-ondes"},{t:"Bouilloire électrique"},
+    {t:"Grille-pain"},{t:"Réfrigérateur (vérifier si fourni)",f:1},
+    {t:"Machine à laver (à confirmer)",f:1},
+    {t:"Assiettes x4, bols x4"},{t:"Verres x4, mugs x2"},
+    {t:"Couverts complets"},{t:"Boîtes hermétiques"}
+  ],
+  menage:[
+    {t:"Liquide vaisselle"},{t:"Éponges"},{t:"Torchons x2"},
+    {t:"Papier essuie-tout"},{t:"Sacs poubelle"},{t:"Poubelle de cuisine"}
+  ],
+  literie:[
+    {t:"Lit (fourni appart meublé)",f:1},{t:"Matelas (vérifier si fourni)",f:1},
+    {t:"Couette + housse"},{t:"Oreillers x2 + taies"},
+    {t:"Drap housse x2"},{t:"Protège-matelas"},{t:"Couverture / plaid"}
+  ],
+  limaison:[
+    {t:"Serviettes de bain x2"},{t:"Serviettes de visage x2"},
+    {t:"Tapis de bain"},{t:"Rideau de douche"},{t:"Torchons de cuisine x3"}
+  ],
+  lessive:[
+    {t:"Lessive"},{t:"Adoucissant"},{t:"Détachant"},
+    {t:"Étendoir à linge"},{t:"Cintres (20+)"},
+    {t:"Panier à linge"},{t:"Fer à repasser + planche"}
+  ],
+  hygiene:[
+    {t:"Gel douche / savon"},{t:"Shampooing"},{t:"Après-shampooing"},
+    {t:"Dentifrice + brosse à dents"},{t:"Fil dentaire"},{t:"Déodorant"},
+    {t:"Coton-tiges"},{t:"Crème hydratante corps"}
+  ],
+  wc:[
+    {t:"Papier toilette (stock)"},{t:"Brosse WC + support"},
+    {t:"Produit WC"},{t:"Poubelle WC"},{t:"Spray désinfectant"}
+  ],
+  accsdb:[
+    {t:"Sèche-cheveux"},{t:"Brosse / peigne"},
+    {t:"Miroir (vérifier si fourni)"},{t:"Rangement maquillage"},
+    {t:"Poubelle salle de bain"},{t:"Crochets derrière la porte"}
+  ],
+  maqui:[
+    {t:"Fond de teint / BB cream"},{t:"Correcteur / anti-cernes"},
+    {t:"Poudre fixante"},{t:"Mascara"},{t:"Liner / crayon yeux"},
+    {t:"Palette fards à paupières"},{t:"Blush / bronzer / enlumineur"},
+    {t:"Rouge à lèvres / gloss"},{t:"Pinceaux maquillage"},
+    {t:"Éponges beauty blender"},{t:"Démaquillant"},{t:"Cotons démaquillants"}
+  ],
+  visage:[
+    {t:"Nettoyant visage"},{t:"Tonique / lotion"},{t:"Sérum"},
+    {t:"Crème hydratante jour"},{t:"Crème nuit"},{t:"SPF visage"},
+    {t:"Masque visage"},{t:"Contour des yeux"}
+  ],
+  epil:[
+    {t:"Rasoir corps ou épilateur"},{t:"Crème dépilatoire"},
+    {t:"Kit épilation / bandes de cire"},{t:"Huile après-épilation"},
+    {t:"Gant exfoliant"},{t:"Gommage corps"},
+    {t:"Coupe-ongles / lime"},{t:"Vernis + dissolvant"}
+  ],
+  hauts:[
+    {t:"T-shirts x5-7"},{t:"Pulls / sweat x3"},{t:"Chemises / blouses x2-3"},
+    {t:"Veste / blazer"},{t:"Manteau / doudoune"},
+    {t:"Pantalons x3-4"},{t:"Jeans x2"},{t:"Robe(s) / jupe(s)"},{t:"Short / jogging"}
+  ],
+  sous:[
+    {t:"Sous-vêtements x7 minimum"},{t:"Soutiens-gorge x3-4"},
+    {t:"Chaussettes x7 paires"},{t:"Pyjama x2"},{t:"Tenue de sport x2"}
+  ],
+  chaus:[
+    {t:"Baskets du quotidien"},{t:"Chaussures habillées / talons"},
+    {t:"Bottes / bottines"},{t:"Sandales / claquettes"},
+    {t:"Chaussures de sport"},{t:"Sac à main / sac à dos"},
+    {t:"Écharpe, bonnet, gants"},{t:"Ceinture(s)"}
+  ],
+  id:[
+    {t:"Carte nationale d'identité"},{t:"Passeport"},
+    {t:"Permis de conduire"},{t:"Carte Vitale"},{t:"Carte de mutuelle"}
+  ],
+  banque:[
+    {t:"RIB / IBAN"},{t:"Bail signé (original)"},
+    {t:"Attestation assurance habitation"},{t:"Avis d'imposition"},
+    {t:"Bulletins de salaire x3"},{t:"Justificatif de domicile"}
+  ],
+  sante:[
+    {t:"Carnet de santé / vaccinations"},{t:"Ordonnances en cours"},
+    {t:"Diplômes / relevés de notes"},{t:"Contrat de travail"},
+    {t:"Documents CAF"},{t:"Documents scolaires"}
+  ]
+};
+
+let db;
+let state = {};
+
+// IndexedDB setup
+function initDB() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open("MoveDB", 1);
+    
+    req.onerror = () => reject(req.error);
+    req.onsuccess = () => {
+      db = req.result;
+      resolve();
+    };
+    
+    req.onupgradeneeded = (e) => {
+      const database = e.target.result;
+      if (!database.objectStoreNames.contains("items")) {
+        database.createObjectStore("items");
+      }
+    };
+  });
+}
+
+function loadFromDB() {
+  return new Promise((resolve) => {
+    const tx = db.transaction("items", "readonly");
+    const store = tx.objectStore("items");
+    const req = store.get("state");
+    
+    req.onsuccess = () => {
+      if (req.result) {
+        state = req.result;
+      }
+      resolve();
+    };
+  });
+}
+
+function saveToDB() {
+  return new Promise((resolve) => {
+    const tx = db.transaction("items", "readwrite");
+    const store = tx.objectStore("items");
+    const req = store.put(state, "state");
+    
+    req.onsuccess = () => resolve();
+  });
+}
+
+async function init() {
+  await initDB();
+  await loadFromDB();
+  render();
+}
+
+function render() {
+  Object.keys(DATA).forEach(sec => {
+    const el = document.getElementById("l-" + sec);
+    if (!el) return;
+    el.innerHTML = "";
+    DATA[sec].forEach((item, i) => {
+      const k = sec + "-" + i;
+      const checked = !!state[k];
+      const div = document.createElement("div");
+      div.className = "item" + (checked ? " checked" : "");
+      div.dataset.key = k;
+      const badge = item.f ? '<span class="badge b-f">fourni</span>' : item.u ? '<span class="badge b-u">urgent</span>' : "";
+      div.innerHTML =
+        '<div class="cb ' + (checked ? "on" : "") + '"></div>' +
+        '<div class="item-label">' + item.t + badge + '</div>';
+      el.appendChild(div);
+    });
+  });
+  update();
+}
+
+function update() {
+  let total = 0, done = 0;
+  Object.keys(DATA).forEach(sec => {
+    DATA[sec].forEach((_, i) => {
+      total++;
+      if (state[sec + "-" + i]) done++;
+    });
+  });
+  const pct = total ? Math.round(done / total * 100) : 0;
+  document.getElementById("pct").textContent = pct + "%";
+  document.getElementById("bar").style.width = pct + "%";
+  document.getElementById("sdone").textContent = done;
+  document.getElementById("sleft").textContent = total - done;
+  document.getElementById("stotal").textContent = total;
+}
+
+document.addEventListener("click", function(e) {
+  const item = e.target.closest(".item");
+  if (item) {
+    const k = item.dataset.key;
+    state[k] = !state[k];
+    saveToDB();
+    item.className = "item" + (state[k] ? " checked" : "");
+    item.querySelector(".cb").className = "cb" + (state[k] ? " on" : "");
+    update();
+    return;
+  }
+  const btn = e.target.closest(".nav-btn");
+  if (btn) {
+    document.querySelectorAll(".nav-btn").forEach(b => b.classList.remove("active"));
+    document.querySelectorAll(".section").forEach(s => s.classList.remove("active"));
+    btn.classList.add("active");
+    document.getElementById("sec-" + btn.dataset.sec).classList.add("active");
+  }
+});
+
+document.getElementById("reset").addEventListener("click", function() {
+  if (confirm("Tout réinitialiser ?")) {
+    state = {};
+    saveToDB();
+    render();
+  }
+});
+
+init();
+</script>
+</body>
+</html>
